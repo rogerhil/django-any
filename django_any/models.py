@@ -419,22 +419,22 @@ def any_onetoone_field(field, **kwargs):
     return any_model(field.rel.to, **kwargs)
 
 
-def _fill_model_fields(_model_object, **kwargs):
+def _fill_model_fields(_model_class, **kwargs):
     model_fields, fields_args = split_model_kwargs(kwargs)
 
     # fill local fields
-    for field in _model_object._meta.fields:
+    for field in _model_class._meta.fields:
         if field.name in model_fields:
             if isinstance(kwargs[field.name], Q):
                 """
                 Lookup ForeingKey field in db
                 """
-                key_field = _model_object._meta.get_field(field.name)
+                key_field = _model_class._meta.get_field(field.name)
                 value = key_field.rel.to.objects.get(kwargs[field.name])
-                setattr(_model_object, field.name, value)
+                setattr(_model_class, field.name, value)
             else:
                 # TODO support any_model call
-                setattr(_model_object, field.name, kwargs[field.name])
+                setattr(_model_class, field.name, kwargs[field.name])
         elif isinstance(field, models.OneToOneField) and field.rel.parent_link:
             """
             skip link to parent instance
@@ -444,16 +444,16 @@ def _fill_model_fields(_model_object, **kwargs):
             skip primary key field
             """
         else:
-            setattr(_model_object, field.name, any_field(field, **fields_args[field.name]))
+            setattr(_model_class, field.name, any_field(field, **fields_args[field.name]))
 
     # procceed reversed relations
     onetoone = [(relation.var_name, relation.field) \
-                for relation in _model_object._meta.get_all_related_objects() \
+                for relation in _model_class._meta.get_all_related_objects() \
                 if relation.field.unique] # TODO and not relation.field.rel.parent_link ??
     for field_name, field in onetoone:
         if field_name in model_fields:
             # TODO support any_model call
-            setattr(_model_object, field_name, kwargs[field_name])
+            setattr(_model_class, field_name, kwargs[field_name])
 
 
 @any_model.register_default
